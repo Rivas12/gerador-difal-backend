@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=development
+      - SECRET_KEY=dev_key
+      - JWT_SECRET=jwt_dev_key
+      - UPLOAD_FOLDER=./uploads
