@@ -1,11 +1,12 @@
-from flask import Flask, request, jsonify
+from flask import Blueprint, request, jsonify
 from app.auth.jwt_utils import createAccessToken, decodeToken
+from app.models import db
 import os
 from datetime import timedelta
 
-app = Flask(__name__)
+routes = Blueprint('routes', __name__)
 
-@app.route('/upload-certificado', methods=['POST'])
+@routes.route('/upload-certificado', methods=['POST'])
 def upload_certificado():
     file = request.files.get('certificado')
     if not file:
@@ -17,9 +18,7 @@ def upload_certificado():
     file.save(path)
     return jsonify({'mensagem': 'Certificado salvo com sucesso'})
 
-
-
-@app.route('/loginSeguro', methods=['POST'])
+@routes.route('/loginSeguro', methods=['POST'])
 def login():
     data = request.get_json()
     token = data.get('token')
@@ -38,8 +37,8 @@ def login():
             {
                 "user_id": 1,
                 "email": email,
-                "role": "admin",  # exemplo de permissão
-                "username": "Administrador"  # se aplicável
+                "role": "admin",
+                "username": "Administrador"
             },
             expires_delta=timedelta(hours=24)
         )
@@ -47,9 +46,18 @@ def login():
     else:
         return jsonify({'erro': 'Credenciais inválidas'}), 401
 
-@app.route('/ping', methods=['GET'])
+@routes.route('/ping', methods=['GET'])
 def ping():
-    return jsonify({'status': 'ok', 'mensagem': 'API está funcionando'}), 200
+    try:
+        db.session.execute('SELECT 1')
+        db_status = 'ok'
+    except Exception as e:
+        db_status = f'erro: {str(e)}'
+    return jsonify({
+        'status': 'ok',
+        'mensagem': 'API está funcionando',
+        'db_status': db_status
+    }), 200
 
 
 
