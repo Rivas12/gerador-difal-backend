@@ -12,7 +12,7 @@ def upload_certificado():
     if not file:
         return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
 
-    upload_folder = os.environ.get('UPLOAD_FOLDER', './uploads')
+    upload_folder = os.environ.get('UPLOAD_FOLDER', './certs')
     os.makedirs(upload_folder, exist_ok=True)
     path = os.path.join(upload_folder, file.filename)
     file.save(path)
