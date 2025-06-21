@@ -12,9 +12,14 @@ def upload_certificado():
     if not file:
         return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
 
+    # Verifica extensão
+    filename = file.filename
+    if not (filename.lower().endswith('.pfx') or filename.lower().endswith('.p12')):
+        return jsonify({'erro': 'Apenas arquivos .pfx ou .p12 são permitidos'}), 400
+
     upload_folder = os.environ.get('UPLOAD_FOLDER', './certs')
     os.makedirs(upload_folder, exist_ok=True)
-    path = os.path.join(upload_folder, file.filename)
+    path = os.path.join(upload_folder, filename)
     file.save(path)
     return jsonify({'mensagem': 'Certificado salvo com sucesso'})
 
