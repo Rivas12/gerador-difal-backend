@@ -14,3 +14,9 @@ def upload_certificado():
     path = os.path.join(upload_folder, file.filename)
     file.save(path)
     return jsonify({'mensagem': 'Certificado salvo com sucesso'})
+
+@gnre_bp.route('/ping', methods=['GET'])
+def ping():
+    return jsonify({'status': 'ok', 'mensagem': 'API está funcionando'}), 200
+
+
