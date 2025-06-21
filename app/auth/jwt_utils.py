@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta, timezone
 import jwt
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
@@ -23,5 +26,5 @@ def decodeToken(token: str):
         return payload
     except jwt.ExpiredSignatureError:
         return None
-    except jwt.JWTError:
+    except jwt.InvalidTokenError:
         return None
