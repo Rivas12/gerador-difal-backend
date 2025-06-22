@@ -3,6 +3,7 @@ from app.auth.jwt_utils import createAccessToken, decodeToken
 from app.models import db
 import os
 from datetime import timedelta
+from sqlalchemy import text  # Adicione este import
 
 routes = Blueprint('routes', __name__)
 
@@ -54,12 +55,12 @@ def login():
 @routes.route('/ping', methods=['GET'])
 def ping():
     try:
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))  # Use text() aqui
         db_status = 'ok'
     except Exception as e:
         db_status = f'erro: {str(e)}'
     return jsonify({
-        'status': 'ok',
+        'api_status': 'ok',
         'mensagem': 'API está funcionando',
         'db_status': db_status
     }), 200
