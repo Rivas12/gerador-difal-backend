@@ -2,4 +2,5 @@ flask
 python-dotenv
 pyjwt
 flask-cors
+flask_sqlalchemy
 pytz
