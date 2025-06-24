@@ -25,6 +25,7 @@ def upload_certificado():
     file.save(path)
     return jsonify({'mensagem': 'Certificado salvo com sucesso'})
 
+
 @routes.route('/loginSeguro', methods=['POST'])
 def login():
     data = request.get_json()
@@ -52,6 +53,7 @@ def login():
         return jsonify({'token': token}), 200
     else:
         return jsonify({'erro': 'Credenciais inválidas'}), 401
+    
 
 @routes.route('/ping', methods=['GET'])
 def ping():
@@ -132,6 +134,7 @@ def ler_xmls():
                 vICMS = None
                 vBC = None
                 pICMS = None
+                vICMSUFDest = None
                 if icms is not None:
                     # ICMS00, ICMS10, ICMS20, etc
                     for icms_tipo in icms:
@@ -139,6 +142,11 @@ def ler_xmls():
                         vBC = icms_tipo.find('nfe:vBC', ns)
                         pICMS = icms_tipo.find('nfe:pICMS', ns)
                         break  # só pega o primeiro grupo ICMS
+
+                # ICMSUFDest (partilha interestadual)
+                icms_ufdest = root.find('.//nfe:infNFe/nfe:det/nfe:imposto/nfe:ICMSUFDest', ns)
+                if icms_ufdest is not None:
+                    vICMSUFDest = icms_ufdest.find('nfe:vICMSUFDest', ns)
 
                 arquivos_lidos.append({
                     'nome': arquivo.filename,
@@ -174,6 +182,7 @@ def ler_xmls():
                     'icms_valor': vICMS.text if vICMS is not None else None,
                     'icms_base_calculo': vBC.text if vBC is not None else None,
                     'icms_aliquota': pICMS.text if pICMS is not None else None,
+                    'icms_ufdest': vICMSUFDest.text if vICMSUFDest is not None else None,
                 })
             except Exception as e:
                 arquivos_lidos.append({
@@ -182,6 +191,31 @@ def ler_xmls():
                 })
 
     return jsonify({'xmls': arquivos_lidos}), 200
+
+@routes.route('/cadastrar-usuario', methods=['POST'])
+def cadastrar_usuario():
+    data = request.get_json()
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not username or not email or not password:
+        return jsonify({'success': False, 'erro': 'username, email e password são obrigatórios'}), 400
+
+    from app.models import Usuario
+    # Verifica se já existe usuário com mesmo email ou username
+    if Usuario.query.filter((Usuario.email == email) | (Usuario.username == username)).first():
+        return jsonify({'success': False, 'erro': 'Usuário já existe com este email ou username'}), 409
+
+    try:
+        usuario = Usuario(username=username, email=email)
+        usuario.senha = password  # setter já faz hash
+        db.session.add(usuario)
+        db.session.commit()
+        return jsonify({'success': True, 'mensagem': 'Usuário cadastrado com sucesso'}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'erro': f'Erro ao cadastrar usuário: {str(e)}'}), 500
 
 
 
