@@ -2,6 +2,8 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
+from decimal import Decimal
+from sqlalchemy.types import Numeric
 
 db = SQLAlchemy()
 
@@ -30,3 +32,8 @@ class Usuario(db.Model):
 
     def __repr__(self):
         return f'<Usuario {self.username}>'
+
+class TabelaICMS(db.Model):
+    __tablename__ = 'tabela_icms'
+    uf = db.Column(db.String(2), primary_key=True)
+    aliquota_icms = db.Column(Numeric(10, 4), nullable=False)
