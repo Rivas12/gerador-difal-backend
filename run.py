@@ -15,7 +15,10 @@ def create_app():
 app = create_app()
 
 with app.app_context():
-    db.create_all()  # Cria as tabelas se não existirem
+    try:
+        db.create_all()  # Cria as tabelas se não existirem
+    except Exception as e:
+        print(f"Erro ao conectar/criar tabelas no banco de dados: {e}")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
