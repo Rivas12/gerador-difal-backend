@@ -5,6 +5,7 @@ import os
 from datetime import timedelta
 from sqlalchemy import text  # Adicione este import
 import xml.etree.ElementTree as ET
+from app.services.xml_reader import ler_xmls_util
 
 routes = Blueprint('routes', __name__)
 
@@ -74,122 +75,7 @@ def ler_xmls():
         return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
 
     arquivos = request.files.getlist('archives')
-    arquivos_lidos = []
-
-    # Define o namespace da NFe
-    ns = {'nfe': 'http://www.portalfiscal.inf.br/nfe'}
-
-    for arquivo in arquivos:
-        if arquivo.filename.lower().endswith('.xml'):
-            conteudo = arquivo.read().decode('utf-8')
-            try:
-                root = ET.fromstring(conteudo)
-
-                # Dados principais
-                nNF = root.find('.//nfe:infNFe/nfe:ide/nfe:nNF', ns)
-                chNFe = root.find('.//nfe:protNFe/nfe:infProt/nfe:chNFe', ns)
-                uf_origem = root.find('.//nfe:infNFe/nfe:emit/nfe:enderEmit/nfe:UF', ns)
-                uf_destino = root.find('.//nfe:infNFe/nfe:dest/nfe:enderDest/nfe:UF', ns)
-                cnpj_emit = root.find('.//nfe:infNFe/nfe:emit/nfe:CNPJ', ns)
-                cnpj_dest = root.find('.//nfe:infNFe/nfe:dest/nfe:CNPJ', ns)
-                cpf_dest = root.find('.//nfe:infNFe/nfe:dest/nfe:CPF', ns)
-                vNF = root.find('.//nfe:infNFe/nfe:total/nfe:ICMSTot/nfe:vNF', ns)
-                cfop = root.find('.//nfe:infNFe/nfe:det/nfe:prod/nfe:CFOP', ns)
-                dhEmi = root.find('.//nfe:infNFe/nfe:ide/nfe:dhEmi', ns)
-                cMun_origem = root.find('.//nfe:infNFe/nfe:emit/nfe:enderEmit/nfe:cMun', ns)
-                cMun_destino = root.find('.//nfe:infNFe/nfe:dest/nfe:enderDest/nfe:cMun', ns)
-
-                # Emitente
-                razao_emit = root.find('.//nfe:infNFe/nfe:emit/nfe:xNome', ns)
-                ie_emit = root.find('.//nfe:infNFe/nfe:emit/nfe:IE', ns)
-                fone_emit = root.find('.//nfe:infNFe/nfe:emit/nfe:enderEmit/nfe:fone', ns)
-                ender_emit = root.find('.//nfe:infNFe/nfe:emit/nfe:enderEmit', ns)
-                emit_logradouro = ender_emit.find('nfe:xLgr', ns) if ender_emit is not None else None
-                emit_numero = ender_emit.find('nfe:nro', ns) if ender_emit is not None else None
-                emit_bairro = ender_emit.find('nfe:bairro', ns) if ender_emit is not None else None
-                emit_cep = ender_emit.find('nfe:CEP', ns) if ender_emit is not None else None
-                emit_municipio = ender_emit.find('nfe:xMun', ns) if ender_emit is not None else None
-
-                # Destinatário
-                razao_dest = root.find('.//nfe:infNFe/nfe:dest/nfe:xNome', ns)
-                ie_dest = root.find('.//nfe:infNFe/nfe:dest/nfe:IE', ns)
-                ender_dest = root.find('.//nfe:infNFe/nfe:dest/nfe:enderDest', ns)
-                dest_logradouro = ender_dest.find('nfe:xLgr', ns) if ender_dest is not None else None
-                dest_numero = ender_dest.find('nfe:nro', ns) if ender_dest is not None else None
-                dest_bairro = ender_dest.find('nfe:bairro', ns) if ender_dest is not None else None
-                dest_cep = ender_dest.find('nfe:CEP', ns) if ender_dest is not None else None
-                dest_municipio = ender_dest.find('nfe:xMun', ns) if ender_dest is not None else None
-
-                # Produto predominante (primeiro item)
-                prod_pred = root.find('.//nfe:infNFe/nfe:det/nfe:prod/nfe:xProd', ns)
-
-                # Placa do veículo (se houver)
-                placa_veic = root.find('.//nfe:infNFe/nfe:transp/nfe:veicTransp/nfe:placa', ns)
-
-                # Data de vencimento (se houver)
-                dt_venc = root.find('.//nfe:infNFe/nfe:cobr/nfe:dup/nfe:dVenc', ns)
-
-                # ICMS (primeiro item)
-                icms = root.find('.//nfe:infNFe/nfe:det/nfe:imposto/nfe:ICMS', ns)
-                vICMS = None
-                vBC = None
-                pICMS = None
-                vICMSUFDest = None
-                if icms is not None:
-                    # ICMS00, ICMS10, ICMS20, etc
-                    for icms_tipo in icms:
-                        vICMS = icms_tipo.find('nfe:vICMS', ns)
-                        vBC = icms_tipo.find('nfe:vBC', ns)
-                        pICMS = icms_tipo.find('nfe:pICMS', ns)
-                        break  # só pega o primeiro grupo ICMS
-
-                # ICMSUFDest (partilha interestadual)
-                icms_ufdest = root.find('.//nfe:infNFe/nfe:det/nfe:imposto/nfe:ICMSUFDest', ns)
-                if icms_ufdest is not None:
-                    vICMSUFDest = icms_ufdest.find('nfe:vICMSUFDest', ns)
-
-                arquivos_lidos.append({
-                    'nome': arquivo.filename,
-                    'numero_nf': nNF.text if nNF is not None else None,
-                    'chave_acesso': chNFe.text if chNFe is not None else None,
-                    'uf_origem': uf_origem.text if uf_origem is not None else None,
-                    'uf_destino': uf_destino.text if uf_destino is not None else None,
-                    'cnpj_emitente': cnpj_emit.text if cnpj_emit is not None else None,
-                    'razao_emitente': razao_emit.text if razao_emit is not None else None,
-                    'ie_emitente': ie_emit.text if ie_emit is not None else None,
-                    'fone_emitente': fone_emit.text if fone_emit is not None else None,
-                    'logradouro_emitente': emit_logradouro.text if emit_logradouro is not None else None,
-                    'numero_emitente': emit_numero.text if emit_numero is not None else None,
-                    'bairro_emitente': emit_bairro.text if emit_bairro is not None else None,
-                    'cep_emitente': emit_cep.text if emit_cep is not None else None,
-                    'municipio_emitente': emit_municipio.text if emit_municipio is not None else None,
-                    'cnpj_destinatario': cnpj_dest.text if cnpj_dest is not None else (cpf_dest.text if cpf_dest is not None else None),
-                    'razao_destinatario': razao_dest.text if razao_dest is not None else None,
-                    'ie_destinatario': ie_dest.text if ie_dest is not None else None,
-                    'logradouro_destinatario': dest_logradouro.text if dest_logradouro is not None else None,
-                    'numero_destinatario': dest_numero.text if dest_numero is not None else None,
-                    'bairro_destinatario': dest_bairro.text if dest_bairro is not None else None,
-                    'cep_destinatario': dest_cep.text if dest_cep is not None else None,
-                    'municipio_destinatario': dest_municipio.text if dest_municipio is not None else None,
-                    'valor_total_nf': vNF.text if vNF is not None else None,
-                    'cfop': cfop.text if cfop is not None else None,
-                    'data_emissao': dhEmi.text if dhEmi is not None else None,
-                    'codigo_municipio_origem': cMun_origem.text if cMun_origem is not None else None,
-                    'codigo_municipio_destino': cMun_destino.text if cMun_destino is not None else None,
-                    'produto_predominante': prod_pred.text if prod_pred is not None else None,
-                    'placa_veiculo': placa_veic.text if placa_veic is not None else None,
-                    'data_vencimento': dt_venc.text if dt_venc is not None else None,
-                    'icms_valor': vICMS.text if vICMS is not None else None,
-                    'icms_base_calculo': vBC.text if vBC is not None else None,
-                    'icms_aliquota': pICMS.text if pICMS is not None else None,
-                    'icms_ufdest': vICMSUFDest.text if vICMSUFDest is not None else None,
-                })
-            except Exception as e:
-                arquivos_lidos.append({
-                    'nome': arquivo.filename,
-                    'erro': f'Erro ao ler XML: {str(e)}'
-                })
-
+    arquivos_lidos = ler_xmls_util(arquivos)
     return jsonify({'xmls': arquivos_lidos}), 200
 
 @routes.route('/cadastrar-usuario', methods=['POST'])
