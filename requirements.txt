@@ -5,3 +5,4 @@ flask-cors
 mysqlclient 
 flask_sqlalchemy
 pytz
+rarfile
