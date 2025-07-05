@@ -67,6 +67,8 @@ def processar_xml(nome_arquivo, conteudo, ns):
         placa_veic = get_text(root, './/nfe:infNFe/nfe:transp/nfe:veicTransp/nfe:placa', ns)
         dt_venc = get_text(root, './/nfe:infNFe/nfe:cobr/nfe:dup/nfe:dVenc', ns)
         icms = root.find('.//nfe:infNFe/nfe:det/nfe:imposto/nfe:ICMS', ns)
+        tipo_op = get_text(root, './/nfe:infNFe/nfe:ide/nfe:tpNF', ns)
+        natureza_receita = get_text(root, './/nfe:infNFe/nfe:ide/nfe:natOp', ns)
         vICMS = ''
         vBC = ''
         pICMS = ''
@@ -78,6 +80,7 @@ def processar_xml(nome_arquivo, conteudo, ns):
                 break
         icms_ufdest = root.find('.//nfe:infNFe/nfe:det/nfe:imposto/nfe:ICMSUFDest', ns)
         vICMSUFDest = get_text(icms_ufdest, 'nfe:vICMSUFDest', ns) if icms_ufdest is not None else ''
+        
         return [{
             'nome': nome_arquivo or '',
             'numero_nf': nNF,
@@ -113,6 +116,8 @@ def processar_xml(nome_arquivo, conteudo, ns):
             'icms_base_calculo': vBC,
             'icms_aliquota': pICMS,
             'icms_ufdest': vICMSUFDest,
+            'tipo_operacao': tipo_op,
+            'natureza_receita': natureza_receita,
         }]
     except Exception as e:
         return [{

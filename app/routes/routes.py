@@ -87,16 +87,33 @@ def guardar_nfes():
         arquivos = request.files.getlist('archives')
         arquivos_lidos = ler_xmls_util(arquivos)
 
+        # Coletar todas as chaves das NFes recebidas
+        chaves_arquivos = [dados.get('chave_acesso') for dados in arquivos_lidos if 'erro' not in dados]
+
+        # Buscar todas as chaves já existentes no banco de uma vez
+        chaves_existentes = set(
+            x[0] for x in db.session.query(NFexportdas.chave_nfe)
+            .filter(NFexportdas.chave_nfe.in_(chaves_arquivos)).all()
+        )
+
         nfes_salvas = []
+        nfes_ja_salvas = []
         erros = []
         for dados in arquivos_lidos:
-            # Pular se veio erro do xml_reader
             if 'erro' in dados:
                 erros.append(dados)
                 continue
 
-            try:
+            chave_nfe = dados.get('chave_acesso')
+            if chave_nfe in chaves_existentes:
+                nfes_ja_salvas.append({
+                    'chave_nfe': chave_nfe,
+                    'numero_nf': dados.get('numero_nf'),
+                    'destinatario': dados.get('razao_destinatario')
+                })
+                continue
 
+            try:
                 data_emissao_nota = None
                 if dados.get('data_emissao'):
                     try:
@@ -111,8 +128,8 @@ def guardar_nfes():
                     ano_referencia = data_emissao_nota.year
 
                 nfe = NFexportdas(
-                    uf_favorecida=dados.get('uf_destino'),  # ou uf_favorecida se existir
-                    codigo_receita="100099",  # ou outro valor fixo ou extraído
+                    uf_favorecida=dados.get('uf_destino'),
+                    codigo_receita="100099",
                     valor_principal=0,
                     valor_total_nota=dados.get('valor_total_nf'),
                     mes_referencia=mes_referencia,
@@ -125,23 +142,25 @@ def guardar_nfes():
                     cep_emitente=dados.get('cep_emitente'),
                     endereco_emitente=dados.get('logradouro_emitente'),
                     numero_nota=dados.get('numero_nf'),
-                    chave_nfe=dados.get('chave_acesso'),
+                    chave_nfe=chave_nfe,
                     data_emissao_nota=data_emissao_nota,
                     descricao_produto=dados.get('produto_predominante'),
-                    natureza_receita=None,  # ajuste se conseguir extrair
-                    tipo_operacao=None,     # ajuste se conseguir extrair
+                    natureza_receita=dados.get('natureza_receita', 'venda'),
+                    tipo_operacao=dados.get('tipo_operacao', 'venda'),
                     codigo_municipio_destino=dados.get('codigo_municipio_destino'),
                     inscricao_estadual_destinatario=dados.get('ie_destinatario')
                 )
                 db.session.add(nfe)
+                db.session.commit()  # Commit individual aqui
                 nfes_salvas.append({
-                    'chave_nfe': dados.get('chave_acesso'),
+                    'chave_nfe': chave_nfe,
                     'numero_nf': dados.get('numero_nf'),
                     'destinatario': dados.get('razao_destinatario')
-                    })
+                })
             except Exception as e:
+                db.session.rollback()
                 erros.append({
-                    'chave_nfe': dados.get('chave_acesso'),
+                    'chave_nfe': chave_nfe,
                     'numero_nf': dados.get('numero_nf'),
                     'destinatario': dados.get('razao_destinatario'),
                     'erro': str(e),
@@ -155,13 +174,15 @@ def guardar_nfes():
                 'success': False,
                 'erro': f'Erro ao salvar no banco: {str(e)}',
                 'exported': nfes_salvas,
+                'already_saved': nfes_ja_salvas,
                 'errors': erros
             }), 500
 
         return jsonify({
             'success': len(erros) == 0,
-            'mensagem': f'{len(nfes_salvas)} NFes guardadas com sucesso, {len(erros)} com erro',
+            'mensagem': f'{len(nfes_salvas)} NFes guardadas com sucesso, {len(erros)} com erro, {len(nfes_ja_salvas)} já existiam',
             'exported': nfes_salvas,
+            'already_saved': nfes_ja_salvas,
             'errors': erros
         }), 200 if len(erros) == 0 else 207
     except Exception as e:

@@ -42,14 +42,16 @@ class TabelaICMS(db.Model):
 class NFexportdas(db.Model):
     __tablename__ = 'guias_gnre'
 
-    id = db.Column(db.Integer, primary_key=True)
+    # Dados da nota fiscal
+    chave_nfe = db.Column(db.String(44), nullable=False, primary_key=True)
+    numero_nota = db.Column(db.String(20), nullable=True)
+    data_emissao_nota = db.Column(db.Date, nullable=True)
 
     # Dados da GNRE
     uf_favorecida = db.Column(db.String(2), nullable=False)  # Ex: 'SP'
     codigo_receita = db.Column(db.String(10), nullable=False)  # Ex: '100099'
     valor_principal = db.Column(db.Numeric(10, 2), nullable=False)
     valor_total_nota = db.Column(db.Numeric(10, 2), nullable=True)
-    data_vencimento = db.Column(db.Date, nullable=True)
     mes_referencia = db.Column(db.Integer, nullable=False)
     ano_referencia = db.Column(db.Integer, nullable=False)
 
@@ -62,14 +64,9 @@ class NFexportdas(db.Model):
     cep_emitente = db.Column(db.String(10), nullable=True)
     endereco_emitente = db.Column(db.String(255), nullable=True)
 
-    # Dados da nota fiscal
-    numero_nota = db.Column(db.String(20), nullable=True)
-    chave_nfe = db.Column(db.String(44), nullable=True)
-    data_emissao_nota = db.Column(db.Date, nullable=True)
-
     # Campos complementares
     descricao_produto = db.Column(db.String(255), nullable=True)
-    natureza_receita = db.Column(db.String(10), nullable=True)
+    natureza_receita = db.Column(db.String(80), nullable=True)
     tipo_operacao = db.Column(db.String(20), nullable=True)  # Ex: 'venda', 'remessa'
     codigo_municipio_destino = db.Column(db.String(7), nullable=True)  # código IBGE
     inscricao_estadual_destinatario = db.Column(db.String(20), nullable=True)
