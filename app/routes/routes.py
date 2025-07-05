@@ -6,8 +6,30 @@ from datetime import timedelta, datetime
 from sqlalchemy import text  # Adicione este import
 import xml.etree.ElementTree as ET
 from app.services.xml_reader import ler_xmls_util
+from functools import wraps
 
 routes = Blueprint('routes', __name__)
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ')[1]
+        if not token and request.is_json:
+            token = request.json.get('token')
+        if not token:
+            return jsonify({'erro': 'Token não fornecido'}), 401
+
+        payload = decodeToken(token)
+        if not payload:
+            return jsonify({'erro': 'Token inválido ou expirado'}), 401
+
+        # Passa o payload como argumento para a função decorada
+        return f(payload, *args, **kwargs)
+    return decorated
 
 @routes.route('/upload-certificado', methods=['POST'])
 def upload_certificado():
@@ -57,6 +79,7 @@ def login():
     
 
 @routes.route('/ping', methods=['GET'])
+@token_required
 def ping():
     try:
         db.session.execute(text('SELECT 1'))  # Use text() aqui
@@ -78,8 +101,11 @@ def ler_xmls():
     arquivos_lidos = ler_xmls_util(arquivos)
     return jsonify({'xmls': arquivos_lidos}), 200
 
+
 @routes.route('/guardar_nfes', methods=['POST'])
-def guardar_nfes():
+@token_required
+def guardar_nfes(payload):
+    print("Payload do token:", payload)  # Isso vai aparecer no terminal do servidor
     try:
         if 'archives' not in request.files:
             return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
@@ -210,7 +236,19 @@ def cadastrar_usuario():
         usuario.senha = password  # setter já faz hash
         db.session.add(usuario)
         db.session.commit()
-        return jsonify({'success': True, 'mensagem': 'Usuário cadastrado com sucesso'}), 201
+
+        # Gerar token para o novo usuário
+        token = createAccessToken(
+            {
+                "user_id": usuario.id,
+                "email": usuario.email,
+                "role": "user",
+                "username": usuario.username
+            },
+            expires_delta=timedelta(hours=24)
+        )
+
+        return jsonify({'success': True, 'mensagem': 'Usuário cadastrado com sucesso', 'token': token}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'erro': f'Erro ao cadastrar usuário: {str(e)}'}), 500
