@@ -27,93 +27,95 @@ def ler_xmls_util(arquivos):
                         arquivos_lidos.extend(processar_xml(info.filename, conteudo, ns))
     return arquivos_lidos
 
+def get_text(element, path, ns):
+    el = element.find(path, ns)
+    return el.text if el is not None and el.text is not None else ''
+
 def processar_xml(nome_arquivo, conteudo, ns):
     try:
         root = ET.fromstring(conteudo)
-        nNF = root.find('.//nfe:infNFe/nfe:ide/nfe:nNF', ns)
-        chNFe = root.find('.//nfe:protNFe/nfe:infProt/nfe:chNFe', ns)
-        uf_origem = root.find('.//nfe:infNFe/nfe:emit/nfe:enderEmit/nfe:UF', ns)
-        uf_destino = root.find('.//nfe:infNFe/nfe:dest/nfe:enderDest/nfe:UF', ns)
-        cnpj_emit = root.find('.//nfe:infNFe/nfe:emit/nfe:CNPJ', ns)
-        cnpj_dest = root.find('.//nfe:infNFe/nfe:dest/nfe:CNPJ', ns)
-        cpf_dest = root.find('.//nfe:infNFe/nfe:dest/nfe:CPF', ns)
-        vNF = root.find('.//nfe:infNFe/nfe:total/nfe:ICMSTot/nfe:vNF', ns)
-        cfop = root.find('.//nfe:infNFe/nfe:det/nfe:prod/nfe:CFOP', ns)
-        dhEmi = root.find('.//nfe:infNFe/nfe:ide/nfe:dhEmi', ns)
-        cMun_origem = root.find('.//nfe:infNFe/nfe:emit/nfe:enderEmit/nfe:cMun', ns)
-        cMun_destino = root.find('.//nfe:infNFe/nfe:dest/nfe:enderDest/nfe:cMun', ns)
-        razao_emit = root.find('.//nfe:infNFe/nfe:emit/nfe:xNome', ns)
-        ie_emit = root.find('.//nfe:infNFe/nfe:emit/nfe:IE', ns)
-        fone_emit = root.find('.//nfe:infNFe/nfe:emit/nfe:enderEmit/nfe:fone', ns)
+        nNF = get_text(root, './/nfe:infNFe/nfe:ide/nfe:nNF', ns)
+        chNFe = get_text(root, './/nfe:protNFe/nfe:infProt/nfe:chNFe', ns)
+        uf_origem = get_text(root, './/nfe:infNFe/nfe:emit/nfe:enderEmit/nfe:UF', ns)
+        uf_destino = get_text(root, './/nfe:infNFe/nfe:dest/nfe:enderDest/nfe:UF', ns)
+        cnpj_emit = get_text(root, './/nfe:infNFe/nfe:emit/nfe:CNPJ', ns)
+        cnpj_dest = get_text(root, './/nfe:infNFe/nfe:dest/nfe:CNPJ', ns)
+        cpf_dest = get_text(root, './/nfe:infNFe/nfe:dest/nfe:CPF', ns)
+        vNF = get_text(root, './/nfe:infNFe/nfe:total/nfe:ICMSTot/nfe:vNF', ns)
+        cfop = get_text(root, './/nfe:infNFe/nfe:det/nfe:prod/nfe:CFOP', ns)
+        dhEmi = get_text(root, './/nfe:infNFe/nfe:ide/nfe:dhEmi', ns)
+        cMun_origem = get_text(root, './/nfe:infNFe/nfe:emit/nfe:enderEmit/nfe:cMun', ns)
+        cMun_destino = get_text(root, './/nfe:infNFe/nfe:dest/nfe:enderDest/nfe:cMun', ns)
+        razao_emit = get_text(root, './/nfe:infNFe/nfe:emit/nfe:xNome', ns)
+        ie_emit = get_text(root, './/nfe:infNFe/nfe:emit/nfe:IE', ns)
+        fone_emit = get_text(root, './/nfe:infNFe/nfe:emit/nfe:enderEmit/nfe:fone', ns)
         ender_emit = root.find('.//nfe:infNFe/nfe:emit/nfe:enderEmit', ns)
-        emit_logradouro = ender_emit.find('nfe:xLgr', ns) if ender_emit is not None else None
-        emit_numero = ender_emit.find('nfe:nro', ns) if ender_emit is not None else None
-        emit_bairro = ender_emit.find('nfe:bairro', ns) if ender_emit is not None else None
-        emit_cep = ender_emit.find('nfe:CEP', ns) if ender_emit is not None else None
-        emit_municipio = ender_emit.find('nfe:xMun', ns) if ender_emit is not None else None
-        razao_dest = root.find('.//nfe:infNFe/nfe:dest/nfe:xNome', ns)
-        ie_dest = root.find('.//nfe:infNFe/nfe:dest/nfe:IE', ns)
+        emit_logradouro = get_text(ender_emit, 'nfe:xLgr', ns) if ender_emit is not None else ''
+        emit_numero = get_text(ender_emit, 'nfe:nro', ns) if ender_emit is not None else ''
+        emit_bairro = get_text(ender_emit, 'nfe:bairro', ns) if ender_emit is not None else ''
+        emit_cep = get_text(ender_emit, 'nfe:CEP', ns) if ender_emit is not None else ''
+        emit_municipio = get_text(ender_emit, 'nfe:xMun', ns) if ender_emit is not None else ''
+        razao_dest = get_text(root, './/nfe:infNFe/nfe:dest/nfe:xNome', ns)
+        ie_dest = get_text(root, './/nfe:infNFe/nfe:dest/nfe:IE', ns)
         ender_dest = root.find('.//nfe:infNFe/nfe:dest/nfe:enderDest', ns)
-        dest_logradouro = ender_dest.find('nfe:xLgr', ns) if ender_dest is not None else None
-        dest_numero = ender_dest.find('nfe:nro', ns) if ender_dest is not None else None
-        dest_bairro = ender_dest.find('nfe:bairro', ns) if ender_dest is not None else None
-        dest_cep = ender_dest.find('nfe:CEP', ns) if ender_dest is not None else None
-        dest_municipio = ender_dest.find('nfe:xMun', ns) if ender_dest is not None else None
-        prod_pred = root.find('.//nfe:infNFe/nfe:det/nfe:prod/nfe:xProd', ns)
-        placa_veic = root.find('.//nfe:infNFe/nfe:transp/nfe:veicTransp/nfe:placa', ns)
-        dt_venc = root.find('.//nfe:infNFe/nfe:cobr/nfe:dup/nfe:dVenc', ns)
+        dest_logradouro = get_text(ender_dest, 'nfe:xLgr', ns) if ender_dest is not None else ''
+        dest_numero = get_text(ender_dest, 'nfe:nro', ns) if ender_dest is not None else ''
+        dest_bairro = get_text(ender_dest, 'nfe:bairro', ns) if ender_dest is not None else ''
+        dest_cep = get_text(ender_dest, 'nfe:CEP', ns) if ender_dest is not None else ''
+        dest_municipio = get_text(ender_dest, 'nfe:xMun', ns) if ender_dest is not None else ''
+        prod_pred = get_text(root, './/nfe:infNFe/nfe:det/nfe:prod/nfe:xProd', ns)
+        placa_veic = get_text(root, './/nfe:infNFe/nfe:transp/nfe:veicTransp/nfe:placa', ns)
+        dt_venc = get_text(root, './/nfe:infNFe/nfe:cobr/nfe:dup/nfe:dVenc', ns)
         icms = root.find('.//nfe:infNFe/nfe:det/nfe:imposto/nfe:ICMS', ns)
-        vICMS = None
-        vBC = None
-        pICMS = None
-        vICMSUFDest = None
+        vICMS = ''
+        vBC = ''
+        pICMS = ''
         if icms is not None:
             for icms_tipo in icms:
-                vICMS = icms_tipo.find('nfe:vICMS', ns)
-                vBC = icms_tipo.find('nfe:vBC', ns)
-                pICMS = icms_tipo.find('nfe:pICMS', ns)
+                vICMS = get_text(icms_tipo, 'nfe:vICMS', ns)
+                vBC = get_text(icms_tipo, 'nfe:vBC', ns)
+                pICMS = get_text(icms_tipo, 'nfe:pICMS', ns)
                 break
         icms_ufdest = root.find('.//nfe:infNFe/nfe:det/nfe:imposto/nfe:ICMSUFDest', ns)
-        if icms_ufdest is not None:
-            vICMSUFDest = icms_ufdest.find('nfe:vICMSUFDest', ns)
+        vICMSUFDest = get_text(icms_ufdest, 'nfe:vICMSUFDest', ns) if icms_ufdest is not None else ''
         return [{
-            'nome': nome_arquivo,
-            'numero_nf': nNF.text if nNF is not None else None,
-            'chave_acesso': chNFe.text if chNFe is not None else None,
-            'uf_origem': uf_origem.text if uf_origem is not None else None,
-            'uf_destino': uf_destino.text if uf_destino is not None else None,
-            'cnpj_emitente': cnpj_emit.text if cnpj_emit is not None else None,
-            'razao_emitente': razao_emit.text if razao_emit is not None else None,
-            'ie_emitente': ie_emit.text if ie_emit is not None else None,
-            'fone_emitente': fone_emit.text if fone_emit is not None else None,
-            'logradouro_emitente': emit_logradouro.text if emit_logradouro is not None else None,
-            'numero_emitente': emit_numero.text if emit_numero is not None else None,
-            'bairro_emitente': emit_bairro.text if emit_bairro is not None else None,
-            'cep_emitente': emit_cep.text if emit_cep is not None else None,
-            'municipio_emitente': emit_municipio.text if emit_municipio is not None else None,
-            'cnpj_destinatario': cnpj_dest.text if cnpj_dest is not None else (cpf_dest.text if cpf_dest is not None else None),
-            'razao_destinatario': razao_dest.text if razao_dest is not None else None,
-            'ie_destinatario': ie_dest.text if ie_dest is not None else None,
-            'logradouro_destinatario': dest_logradouro.text if dest_logradouro is not None else None,
-            'numero_destinatario': dest_numero.text if dest_numero is not None else None,
-            'bairro_destinatario': dest_bairro.text if dest_bairro is not None else None,
-            'cep_destinatario': dest_cep.text if dest_cep is not None else None,
-            'municipio_destinatario': dest_municipio.text if dest_municipio is not None else None,
-            'valor_total_nf': vNF.text if vNF is not None else None,
-            'cfop': cfop.text if cfop is not None else None,
-            'data_emissao': dhEmi.text if dhEmi is not None else None,
-            'codigo_municipio_origem': cMun_origem.text if cMun_origem is not None else None,
-            'codigo_municipio_destino': cMun_destino.text if cMun_destino is not None else None,
-            'produto_predominante': prod_pred.text if prod_pred is not None else None,
-            'placa_veiculo': placa_veic.text if placa_veic is not None else None,
-            'data_vencimento': dt_venc.text if dt_venc is not None else None,
-            'icms_valor': vICMS.text if vICMS is not None else None,
-            'icms_base_calculo': vBC.text if vBC is not None else None,
-            'icms_aliquota': pICMS.text if pICMS is not None else None,
-            'icms_ufdest': vICMSUFDest.text if vICMSUFDest is not None else None,
+            'nome': nome_arquivo or '',
+            'numero_nf': nNF,
+            'chave_acesso': chNFe,
+            'uf_origem': uf_origem,
+            'uf_destino': uf_destino,
+            'cnpj_emitente': cnpj_emit,
+            'razao_emitente': razao_emit,
+            'ie_emitente': ie_emit,
+            'fone_emitente': fone_emit,
+            'logradouro_emitente': emit_logradouro,
+            'numero_emitente': emit_numero,
+            'bairro_emitente': emit_bairro,
+            'cep_emitente': emit_cep,
+            'municipio_emitente': emit_municipio,
+            'cnpj_destinatario': cnpj_dest if cnpj_dest else cpf_dest,
+            'razao_destinatario': razao_dest,
+            'ie_destinatario': ie_dest,
+            'logradouro_destinatario': dest_logradouro,
+            'numero_destinatario': dest_numero,
+            'bairro_destinatario': dest_bairro,
+            'cep_destinatario': dest_cep,
+            'municipio_destinatario': dest_municipio,
+            'valor_total_nf': vNF,
+            'cfop': cfop,
+            'data_emissao': dhEmi,
+            'codigo_municipio_origem': cMun_origem,
+            'codigo_municipio_destino': cMun_destino,
+            'produto_predominante': prod_pred,
+            'placa_veiculo': placa_veic,
+            'data_vencimento': dt_venc,
+            'icms_valor': vICMS,
+            'icms_base_calculo': vBC,
+            'icms_aliquota': pICMS,
+            'icms_ufdest': vICMSUFDest,
         }]
     except Exception as e:
         return [{
-            'nome': nome_arquivo,
+            'nome': nome_arquivo or '',
             'erro': f'Erro ao ler XML: {str(e)}'
         }]

@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from app.auth.jwt_utils import createAccessToken, decodeToken
-from app.models import db
+from app.models import db, NFexportdas
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 from sqlalchemy import text  # Adicione este import
 import xml.etree.ElementTree as ET
 from app.services.xml_reader import ler_xmls_util
@@ -77,6 +77,97 @@ def ler_xmls():
     arquivos = request.files.getlist('archives')
     arquivos_lidos = ler_xmls_util(arquivos)
     return jsonify({'xmls': arquivos_lidos}), 200
+
+@routes.route('/guardar_nfes', methods=['POST'])
+def guardar_nfes():
+    try:
+        if 'archives' not in request.files:
+            return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
+
+        arquivos = request.files.getlist('archives')
+        arquivos_lidos = ler_xmls_util(arquivos)
+
+        nfes_salvas = []
+        erros = []
+        for dados in arquivos_lidos:
+            # Pular se veio erro do xml_reader
+            if 'erro' in dados:
+                erros.append(dados)
+                continue
+
+            try:
+
+                data_emissao_nota = None
+                if dados.get('data_emissao'):
+                    try:
+                        data_emissao_nota = datetime.strptime(dados['data_emissao'][:10], "%Y-%m-%d").date()
+                    except Exception:
+                        data_emissao_nota = None
+
+                mes_referencia = None
+                ano_referencia = None
+                if data_emissao_nota:
+                    mes_referencia = data_emissao_nota.month
+                    ano_referencia = data_emissao_nota.year
+
+                nfe = NFexportdas(
+                    uf_favorecida=dados.get('uf_destino'),  # ou uf_favorecida se existir
+                    codigo_receita="100099",  # ou outro valor fixo ou extraído
+                    valor_principal=0,
+                    valor_total_nota=dados.get('valor_total_nf'),
+                    mes_referencia=mes_referencia,
+                    ano_referencia=ano_referencia,
+                    cnpj_emitente=dados.get('cnpj_emitente'),
+                    razao_social_emitente=dados.get('razao_emitente'),
+                    inscricao_estadual=dados.get('ie_emitente'),
+                    uf_origem=dados.get('uf_origem'),
+                    municipio_emitente_ibge=dados.get('codigo_municipio_origem'),
+                    cep_emitente=dados.get('cep_emitente'),
+                    endereco_emitente=dados.get('logradouro_emitente'),
+                    numero_nota=dados.get('numero_nf'),
+                    chave_nfe=dados.get('chave_acesso'),
+                    data_emissao_nota=data_emissao_nota,
+                    descricao_produto=dados.get('produto_predominante'),
+                    natureza_receita=None,  # ajuste se conseguir extrair
+                    tipo_operacao=None,     # ajuste se conseguir extrair
+                    codigo_municipio_destino=dados.get('codigo_municipio_destino'),
+                    inscricao_estadual_destinatario=dados.get('ie_destinatario')
+                )
+                db.session.add(nfe)
+                nfes_salvas.append({
+                    'chave_nfe': dados.get('chave_acesso'),
+                    'numero_nf': dados.get('numero_nf'),
+                    'destinatario': dados.get('razao_destinatario')
+                    })
+            except Exception as e:
+                erros.append({
+                    'chave_nfe': dados.get('chave_acesso'),
+                    'numero_nf': dados.get('numero_nf'),
+                    'destinatario': dados.get('razao_destinatario'),
+                    'erro': str(e),
+                })
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'erro': f'Erro ao salvar no banco: {str(e)}',
+                'exported': nfes_salvas,
+                'errors': erros
+            }), 500
+
+        return jsonify({
+            'success': len(erros) == 0,
+            'mensagem': f'{len(nfes_salvas)} NFes guardadas com sucesso, {len(erros)} com erro',
+            'exported': nfes_salvas,
+            'errors': erros
+        }), 200 if len(erros) == 0 else 207
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'erro': f'Erro ao guardar NFes: {str(e)}'}), 500
+    
 
 @routes.route('/cadastrar-usuario', methods=['POST'])
 def cadastrar_usuario():

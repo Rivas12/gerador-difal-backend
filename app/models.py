@@ -49,7 +49,7 @@ class NFexportdas(db.Model):
     codigo_receita = db.Column(db.String(10), nullable=False)  # Ex: '100099'
     valor_principal = db.Column(db.Numeric(10, 2), nullable=False)
     valor_total_nota = db.Column(db.Numeric(10, 2), nullable=True)
-    data_vencimento = db.Column(db.Date, nullable=False)
+    data_vencimento = db.Column(db.Date, nullable=True)
     mes_referencia = db.Column(db.Integer, nullable=False)
     ano_referencia = db.Column(db.Integer, nullable=False)
 
