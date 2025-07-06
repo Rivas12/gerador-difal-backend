@@ -49,7 +49,7 @@ def upload_certificado():
     return jsonify({'mensagem': 'Certificado salvo com sucesso'})
 
 
-@routes.route('/loginSeguro', methods=['POST'])
+@routes.route('/login-seguro', methods=['POST'])
 def login():
     data = request.get_json()
     token = data.get('token')
@@ -58,22 +58,28 @@ def login():
         if payload:
             return jsonify({'valido': True, 'mensagem': 'Token válido', **payload}), 200
         else:
-            return jsonify({'valido': False,}), 401
+            return jsonify({'valido': False}), 401
 
     email = data.get('email')
     password = data.get('password')
 
-    if email == 'admin' and password == 'senha123':
+    if not email or not password:
+        return jsonify({'erro': 'Email e senha são obrigatórios'}), 400
+
+    from app.models import Usuario
+    usuario = Usuario.query.filter_by(email=email).first()
+    if usuario and usuario.verificar_senha(password):
         token = createAccessToken(
             {
-                "user_id": 1,
-                "email": email,
-                "role": "admin",
-                "username": "Administrador"
+                "user_id": usuario.id,
+                "email": usuario.email,
+                "role": getattr(usuario, 'role', 'admin'),
+                "username": usuario.username
             },
             expires_delta=timedelta(hours=24)
         )
-        return jsonify({'token': token}), 200
+        payload = decodeToken(token)
+        return jsonify({'valido': True, 'mensagem': 'Login realizado com sucesso', 'token': token, **payload}), 200
     else:
         return jsonify({'erro': 'Credenciais inválidas'}), 401
     
@@ -92,6 +98,7 @@ def ping():
         'db_status': db_status
     }), 200
 
+
 @routes.route('/ler-xmls', methods=['POST'])
 def ler_xmls():
     if 'archives' not in request.files:
@@ -101,11 +108,31 @@ def ler_xmls():
     arquivos_lidos = ler_xmls_util(arquivos)
     return jsonify({'xmls': arquivos_lidos}), 200
 
+@routes.route('/listar-nfes', methods=['GET'])
+@token_required
+def listar_nfes(payload):
+    try:
+        nfes = db.session.query(NFexportdas).filter_by(user_id=payload['user_id']).all()
+        nfes_list = []
+        for nfe in nfes:
+            nfes_list.append({
+                'chave_nfe': nfe.chave_nfe,
+                'numero_nf': nfe.numero_nota,
+                'data_emissao': nfe.data_emissao_nota.strftime('%Y-%m-%d') if nfe.data_emissao_nota else None,
+                'uf_favorecida': nfe.uf_favorecida,
+                'valor_total_nota': str(nfe.valor_total_nota) if nfe.valor_total_nota else None,
+                'razao_social_emitente': nfe.razao_social_emitente,
+                'cnpj_emitente': nfe.cnpj_emitente,
+                'natureza_receita': nfe.natureza_receita,
+                'tipo_operacao': nfe.tipo_operacao
+            })
+        return jsonify({'nfes': nfes_list}), 200
+    except Exception as e:
+        return jsonify({'erro': f'Erro ao listar NFes: {str(e)}'}), 500
 
 @routes.route('/guardar_nfes', methods=['POST'])
 @token_required
 def guardar_nfes(payload):
-    print("Payload do token:", payload)  # Isso vai aparecer no terminal do servidor
     try:
         if 'archives' not in request.files:
             return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
@@ -154,6 +181,7 @@ def guardar_nfes(payload):
                     ano_referencia = data_emissao_nota.year
 
                 nfe = NFexportdas(
+                    user_id=payload['user_id'],
                     uf_favorecida=dados.get('uf_destino'),
                     codigo_receita="100099",
                     valor_principal=0,

@@ -42,8 +42,13 @@ class TabelaICMS(db.Model):
 class NFexportdas(db.Model):
     __tablename__ = 'guias_gnre'
 
-    # Dados da nota fiscal
+    # Identificador único da guia
     chave_nfe = db.Column(db.String(44), nullable=False, primary_key=True)
+
+    # User ID do usuário que criou a guia
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+
+    # Dados da nota fiscal
     numero_nota = db.Column(db.String(20), nullable=True)
     data_emissao_nota = db.Column(db.Date, nullable=True)
 
