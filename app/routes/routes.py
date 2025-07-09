@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.auth.jwt_utils import createAccessToken, decodeToken
+from app.auth.jwt_utils import decodeToken, login, cadastrar_usuario
 from app.models import db, NFexportdas
 import os
 from datetime import timedelta, datetime
@@ -32,7 +32,8 @@ def token_required(f):
     return decorated
 
 @routes.route('/upload-certificado', methods=['POST'])
-def upload_certificado():
+@token_required
+def upload_certificado(payload):
     file = request.files.get('certificado')
     if not file:
         return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
@@ -44,45 +45,18 @@ def upload_certificado():
 
     upload_folder = os.environ.get('UPLOAD_FOLDER', './certs')
     os.makedirs(upload_folder, exist_ok=True)
-    path = os.path.join(upload_folder, filename)
+
+    # Renomeia o arquivo com o user_id
+    ext = os.path.splitext(filename)[1]
+    new_filename = f"{payload['user_id']}{ext}"
+    path = os.path.join(upload_folder, new_filename)
     file.save(path)
-    return jsonify({'mensagem': 'Certificado salvo com sucesso'})
+    return jsonify({'mensagem': 'Certificado salvo com sucesso', 'status': 'ok'})
 
 
 @routes.route('/login-seguro', methods=['POST'])
-def login():
-    data = request.get_json()
-    token = data.get('token')
-    if token:
-        payload = decodeToken(token)
-        if payload:
-            return jsonify({'valido': True, 'mensagem': 'Token válido', **payload}), 200
-        else:
-            return jsonify({'valido': False}), 401
-
-    email = data.get('email')
-    password = data.get('password')
-
-    if not email or not password:
-        return jsonify({'erro': 'Email e senha são obrigatórios'}), 400
-
-    from app.models import Usuario
-    usuario = Usuario.query.filter_by(email=email).first()
-    if usuario and usuario.verificar_senha(password):
-        token = createAccessToken(
-            {
-                "user_id": usuario.id,
-                "email": usuario.email,
-                "role": getattr(usuario, 'role', 'admin'),
-                "username": usuario.username
-            },
-            expires_delta=timedelta(hours=24)
-        )
-        payload = decodeToken(token)
-        return jsonify({'valido': True, 'mensagem': 'Login realizado com sucesso', 'token': token, **payload}), 200
-    else:
-        return jsonify({'erro': 'Credenciais inválidas'}), 401
-    
+def login_seguro():
+    return login()
 
 @routes.route('/ping', methods=['GET'])
 @token_required
@@ -184,7 +158,6 @@ def guardar_nfes(payload):
                     user_id=payload['user_id'],
                     uf_favorecida=dados.get('uf_destino'),
                     codigo_receita="100099",
-                    valor_principal=0,
                     valor_total_nota=dados.get('valor_total_nf'),
                     mes_referencia=mes_referencia,
                     ano_referencia=ano_referencia,
@@ -202,7 +175,11 @@ def guardar_nfes(payload):
                     natureza_receita=dados.get('natureza_receita', 'venda'),
                     tipo_operacao=dados.get('tipo_operacao', 'venda'),
                     codigo_municipio_destino=dados.get('codigo_municipio_destino'),
-                    inscricao_estadual_destinatario=dados.get('ie_destinatario')
+                    inscricao_estadual_destinatario=dados.get('ie_destinatario'),
+                    icms_tipo=dados.get('icms_tipo'),
+                    icms_base=dados.get('icms_base'),
+                    icms_aliquota=dados.get('icms_aliquota'),
+                    icms_valor=dados.get('icms_valor')
                 )
                 db.session.add(nfe)
                 db.session.commit()  # Commit individual aqui
@@ -243,43 +220,9 @@ def guardar_nfes(payload):
         db.session.rollback()
         return jsonify({'success': False, 'erro': f'Erro ao guardar NFes: {str(e)}'}), 500
     
-
 @routes.route('/cadastrar-usuario', methods=['POST'])
-def cadastrar_usuario():
-    data = request.get_json()
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
-
-    if not username or not email or not password:
-        return jsonify({'success': False, 'erro': 'username, email e password são obrigatórios'}), 400
-
-    from app.models import Usuario
-    # Verifica se já existe usuário com mesmo email ou username
-    if Usuario.query.filter((Usuario.email == email) | (Usuario.username == username)).first():
-        return jsonify({'success': False, 'erro': 'Usuário já existe com este email ou username'}), 409
-
-    try:
-        usuario = Usuario(username=username, email=email)
-        usuario.senha = password  # setter já faz hash
-        db.session.add(usuario)
-        db.session.commit()
-
-        # Gerar token para o novo usuário
-        token = createAccessToken(
-            {
-                "user_id": usuario.id,
-                "email": usuario.email,
-                "role": "user",
-                "username": usuario.username
-            },
-            expires_delta=timedelta(hours=24)
-        )
-
-        return jsonify({'success': True, 'mensagem': 'Usuário cadastrado com sucesso', 'token': token}), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'erro': f'Erro ao cadastrar usuário: {str(e)}'}), 500
+def cadastrar_user():
+    return cadastrar_usuario()
 
 
 
