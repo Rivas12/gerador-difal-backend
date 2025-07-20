@@ -78,8 +78,14 @@ def processar_xml(nome_arquivo, conteudo, ns):
                 vBC = get_text(icms_tipo, 'nfe:vBC', ns)
                 pICMS = get_text(icms_tipo, 'nfe:pICMS', ns)
                 break
+        # Dados do DIFAL (ICMSUFDest)
         icms_ufdest = root.find('.//nfe:infNFe/nfe:det/nfe:imposto/nfe:ICMSUFDest', ns)
         vICMSUFDest = get_text(icms_ufdest, 'nfe:vICMSUFDest', ns) if icms_ufdest is not None else ''
+        vICMSUFRemet = get_text(icms_ufdest, 'nfe:vICMSUFRemet', ns) if icms_ufdest is not None else ''
+        vBCUFDest = get_text(icms_ufdest, 'nfe:vBCUFDest', ns) if icms_ufdest is not None else ''
+        pICMSUFDest = get_text(icms_ufdest, 'nfe:pICMSUFDest', ns) if icms_ufdest is not None else ''
+        pICMSInter = get_text(icms_ufdest, 'nfe:pICMSInter', ns) if icms_ufdest is not None else ''
+        pICMSInterPart = get_text(icms_ufdest, 'nfe:pICMSInterPart', ns) if icms_ufdest is not None else ''
         
         return [{
             'nome': nome_arquivo or '',
@@ -116,7 +122,13 @@ def processar_xml(nome_arquivo, conteudo, ns):
             'icms_base': vBC,
             'icms_aliquota': pICMS,
             'icms_valor': vICMS,
-            'icms_ufdest': vICMSUFDest,
+            # Dados do DIFAL
+            'difal_valor_destino': vICMSUFDest,  # Valor do ICMS devido à UF de destino
+            'difal_valor_remetente': vICMSUFRemet,  # Valor do ICMS devido à UF do remetente
+            'difal_base_calculo': vBCUFDest,  # Base de cálculo do DIFAL
+            'difal_aliquota_destino': pICMSUFDest,  # Alíquota do ICMS da UF de destino
+            'difal_aliquota_interestadual': pICMSInter,  # Alíquota interestadual
+            'difal_percentual_partilha': pICMSInterPart,  # Percentual de partilha
             'tipo_operacao': tipo_op,
             'natureza_receita': natureza_receita,
         }]
@@ -125,3 +137,13 @@ def processar_xml(nome_arquivo, conteudo, ns):
             'nome': nome_arquivo or '',
             'erro': f'Erro ao ler XML: {str(e)}'
         }]
+
+def processar_upload_xmls():
+    from flask import request, jsonify
+    
+    if 'archives' not in request.files:
+        return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
+
+    arquivos = request.files.getlist('archives')
+    arquivos_lidos = ler_xmls_util(arquivos)
+    return jsonify({'xmls': arquivos_lidos}), 200
