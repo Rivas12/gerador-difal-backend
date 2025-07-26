@@ -95,6 +95,20 @@ def criar_gnre(payload):
     from app.services.certificado_service import processar_criar_gnre
     return processar_criar_gnre(payload)
 
+@routes.route('/listar-guias', methods=['GET'])
+@token_required
+def listar_guias(payload):
+    """Rota para listar todas as guias GNRE do usuário com dados da NFe"""
+    from app.services.gnre_service import listar_guias_usuario
+    return listar_guias_usuario(payload)
+
+@routes.route('/obter-guia/<int:guia_id>', methods=['GET'])
+@token_required
+def obter_guia(payload, guia_id):
+    """Rota para obter uma guia GNRE específica com dados completos da NFe"""
+    from app.services.gnre_service import obter_guia_por_id
+    return obter_guia_por_id(payload, guia_id)
+
 # =============================================================================
 # ROTAS DE DASHBOARD E SISTEMA
 # =============================================================================

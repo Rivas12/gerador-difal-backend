@@ -1,3 +1,4 @@
+# Importações necessárias
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import pytz
@@ -5,12 +6,19 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from decimal import Decimal
 from sqlalchemy.types import Numeric
 
+# Inicialização do SQLAlchemy
 db = SQLAlchemy()
 
+# Função utilitária para timezone de São Paulo
 def now_sp():
     tz = pytz.timezone('America/Sao_Paulo')
     return datetime.now(tz)
 
+# ===================================================================
+# MODELOS DE AUTENTICAÇÃO E USUÁRIOS
+# ===================================================================
+
+# Modelo principal de usuário do sistema
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
     id = db.Column(db.Integer, primary_key=True)
@@ -32,8 +40,8 @@ class Usuario(db.Model):
 
     def __repr__(self):
         return f'<Usuario {self.username}>'
-    
 
+# Dados complementares do usuário (informações empresariais)
 class UsuarioDados(db.Model):
     __tablename__ = 'usuarios_dados'
     id = db.Column(db.Integer, primary_key=True)
@@ -47,6 +55,11 @@ class UsuarioDados(db.Model):
 
     usuario = db.relationship('Usuario', backref='dados')
 
+# ===================================================================
+# MODELOS DE SISTEMA E AUDITORIA
+# ===================================================================
+
+# Log de atividades do usuário no sistema
 class AtividadesRecentes(db.Model):
     __tablename__ = 'atividades_recentes'
     id = db.Column(db.Integer, primary_key=True)
@@ -57,11 +70,17 @@ class AtividadesRecentes(db.Model):
 
     usuario = db.relationship('Usuario', backref='atividades_recentes')
 
+# ===================================================================
+# MODELOS DE CONFIGURAÇÃO FISCAL
+# ===================================================================
+
+# Tabela de alíquotas de ICMS por UF
 class TabelaICMS(db.Model):
     __tablename__ = 'tabela_icms'
     uf = db.Column(db.String(2), primary_key=True)
     aliquota_icms = db.Column(Numeric(10, 4), nullable=False)
 
+# Certificados digitais dos usuários
 class CertificadoDigital(db.Model):
     __tablename__ = 'certificados_digitais'
     id = db.Column(db.Integer, primary_key=True)
@@ -82,8 +101,12 @@ class CertificadoDigital(db.Model):
         return check_password_hash(self._senha, senha_plana)
 
     usuario = db.relationship('Usuario', backref='certificados')
-    
 
+# ===================================================================
+# MODELOS DE NOTAS FISCAIS E DIFAL
+# ===================================================================
+
+# Dados das notas fiscais exportadas para geração de DIFAL
 class NFexportdas(db.Model):
     __tablename__ = 'notas_fiscais_exportadas'
 
@@ -147,7 +170,11 @@ class NFexportdas(db.Model):
     data_updated = db.Column(db.DateTime, nullable=False, default=now_sp, onupdate=now_sp)
     status = db.Column(db.String(30), nullable=False, default='pendente')  # Ex: 'pendente', 'gerado', 'pago', 'cancelado'
 
+# ===================================================================
+# MODELOS DE GNRE
+# ===================================================================
 
+# Guias GNRE geradas a partir das notas fiscais
 class GnreGuia(db.Model):
     __tablename__ = 'gnre_guias'
 

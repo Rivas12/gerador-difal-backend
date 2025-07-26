@@ -47,7 +47,7 @@ def login():
                     "role": payload.get("role", "admin"),
                     "username": payload.get("username")
                 },
-                expires_delta=timedelta(minutes=10)
+                expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
             )
             return jsonify({
                 'valido': True, 
